@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>타워 디펜스 코딩 게임</title>
+    <title>멀티 타워 디펜스 코딩 게임</title>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     <style>
         * {
@@ -20,10 +20,10 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 600px 1fr;
             gap: 20px;
         }
         
@@ -52,6 +52,7 @@
             border: 2px solid #4ec9b0;
             border-radius: 4px;
             display: block;
+            cursor: pointer;
         }
         
         .stats {
@@ -80,34 +81,21 @@
             font-weight: bold;
         }
         
-        #codeEditor {
-            width: 100%;
-            height: 400px;
-            background: #1e1e1e;
-            border: 1px solid #3e3e42;
-            border-radius: 4px;
-            padding: 15px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            color: #d4d4d4;
-            resize: vertical;
-            line-height: 1.5;
-        }
-        
         .controls {
             display: flex;
             gap: 10px;
             margin: 15px 0;
+            flex-wrap: wrap;
         }
         
         button {
             background: #0e639c;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             transition: background 0.2s;
         }
@@ -134,45 +122,128 @@
             border: 1px solid #3e3e42;
             border-radius: 4px;
             padding: 15px;
-            height: 200px;
+            height: 150px;
             overflow-y: auto;
             font-size: 13px;
             line-height: 1.6;
         }
         
-        .log-info {
-            color: #4ec9b0;
+        .log-info { color: #4ec9b0; }
+        .log-error { color: #f48771; }
+        .log-warning { color: #dcdcaa; }
+        .log-success { color: #4ec9b0; }
+        
+        .script-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
         }
         
-        .log-error {
+        .script-tab {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            padding: 8px 16px;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .script-tab:hover {
+            background: #2d2d30;
+        }
+        
+        .script-tab.active {
+            background: #0e639c;
+            color: white;
+            border-color: #0e639c;
+        }
+        
+        .script-tab input {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-family: inherit;
+            font-size: inherit;
+            width: 100px;
+            outline: none;
+        }
+        
+        .script-tab .close {
+            margin-left: 8px;
+            color: #858585;
+            cursor: pointer;
+        }
+        
+        .script-tab .close:hover {
             color: #f48771;
         }
         
-        .log-warning {
-            color: #dcdcaa;
-        }
-        
-        .log-success {
-            color: #4ec9b0;
-        }
-        
-        .template-info {
+        #codeEditor {
+            width: 100%;
+            height: 500px;
             background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 0 4px 4px 4px;
             padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            color: #d4d4d4;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        
+        .tower-list {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
             border-radius: 4px;
-            border-left: 4px solid #569cd6;
-            margin-bottom: 15px;
-            font-size: 13px;
-            line-height: 1.6;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .tower-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #252526;
+            border: 2px solid #3e3e42;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tower-item:hover {
+            border-color: #4ec9b0;
+        }
+        
+        .tower-item.selected {
+            border-color: #0e639c;
+            background: #0e639c22;
+        }
+        
+        .tower-script-select {
+            margin-top: 8px;
+        }
+        
+        .tower-script-select select {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            width: 100%;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="panel">
-            <h1>🎮 타워 디펜스 코딩 게임</h1>
+            <h1>🏰 멀티 타워 디펜스</h1>
             
             <canvas id="gameCanvas" width="600" height="400"></canvas>
+            <p style="font-size: 12px; color: #858585; margin-top: 5px;">💡 타워를 클릭해서 선택하세요</p>
             
             <div class="stats">
                 <div class="stat">
@@ -203,6 +274,9 @@
             <div class="controls">
                 <button id="runBtn">▶ 실행</button>
                 <button id="stopBtn" class="danger" disabled>■ 정지</button>
+                <button id="pauseBtn" style="background: #d68a0e;" disabled>⏸ 일시정지</button>
+                <button id="stepBtn" style="background: #569cd6;" disabled>➡ 1프레임</button>
+                <button id="speedBtn" style="background: #4ec9b0;">⚡ 속도: 1x</button>
                 <button id="resetBtn">↻ 리셋</button>
             </div>
             
@@ -211,107 +285,84 @@
         </div>
         
         <div class="panel">
-            <h2>💻 파이썬 코드</h2>
+            <h2>🏰 타워 관리</h2>
+            <div class="tower-list" id="towerList"></div>
             
-            <div class="template-info">
-                <strong>사용 가능한 API:</strong><br>
-                • <code>zombies</code> - 좀비 리스트 (distance, hp, type, isVulnerable 속성)<br>
-                • <code>zombie.type</code> - 'basic', 'vulnerable', 'bonus', 'boss'<br>
-                • <strong>⭐ bonus</strong> - 빠른 시안색, 맞추면 데미지 +1!<br>
-                • <strong>🔥 boss</strong> - 5레벨마다, 거대 보라색, 처치 시 카드 선택!<br>
-                • <code>tower.shoot(zombie)</code> - 좀비 객체로 공격<br>
-                • <code>tower.ammo</code> - 남은 탄약<br>
-                <br>
-                <strong>🃏 카드 선택 함수 (선택사항):</strong><br>
-                • <code>on_boss_defeated(tower, cards)</code> 함수 정의<br>
-                • 보스 처치 시 자동 호출됨<br>
-                • 선택한 카드의 name을 return
-            </div>
+            <h2>💻 스크립트 편집</h2>
+            <button id="newScriptBtn" style="margin-bottom: 10px;">+ 새 스크립트</button>
             
-            <textarea id="codeEditor" spellcheck="false"># 타워 AI 코드를 작성하세요!
+            <div class="script-tabs" id="scriptTabs"></div>
+            <textarea id="codeEditor" spellcheck="false"># 타워 AI 스크립트
 
 def ai_logic(tower, zombies):
-    """
-    매 프레임마다 호출됩니다.
-    
-    전략 힌트:
-    - bonus 좀비 우선 처치 → 데미지 업그레이드!
-    - 보스는 데미지 업그레이드 후 집중 공격
-    """
-    
     if not zombies or tower.ammo <= 0:
         return
     
-    # 사거리 안의 좀비들만 필터
     in_range = [z for z in zombies if z.distance < 200]
     if not in_range:
         return
     
-    # 1순위: bonus 좀비 (데미지 업!)
+    # bonus 우선
     bonus = [z for z in in_range if z.type == 'bonus']
     if bonus:
-        target = min(bonus, key=lambda z: z.distance)
-        tower.shoot(target)  # 좀비 객체 전달!
+        print("보너스 좀비 발견!")  # 로그에 출력!
+        tower.shoot(min(bonus, key=lambda z: z.distance))
         return
     
-    # 2순위: vulnerable 좀비 (공격 가능할 때)
-    vulnerable = [z for z in in_range if z.type == 'vulnerable' and z.isVulnerable]
-    if vulnerable:
-        target = min(vulnerable, key=lambda z: z.distance)
-        tower.shoot(target)  # 좀비 객체 전달!
-        return
-    
-    # 3순위: 가장 가까운 좀비
+    # 가장 가까운 좀비
     closest = min(in_range, key=lambda z: z.distance)
-    tower.shoot(closest)  # 좀비 객체 전달!
-
-
-def on_boss_defeated(tower, cards):
-    """
-    보스 처치 시 호출됩니다.
-    
-    Args:
-        tower: 타워 상태 (damage, ammo, maxAmmo, upgrades)
-        cards: 선택 가능한 카드 리스트
-            [{'name': 'rapid_fire', 'description': '🔥 연사 - 발사속도 +50%'}, ...]
-    
-    Returns:
-        선택한 카드의 name (str)
-    """
-    
-    # 카드 이름들 출력
-    print("=== 카드 선택 ===")
-    for card in cards:
-        print(f"- {card.name}: {card.description}")
-    
-    # 전략적 선택
-    # 데미지가 낮으면 화력 증강
-    if tower.damage < 3:
-        for card in cards:
-            if card.name in ['damage_up', 'rapid_fire']:
-                return card.name
-    
-    # 탄약 부족하면 재생이나 탄약고
-    if tower.ammo < 50:
-        for card in cards:
-            if card.name in ['ammo_regen', 'reload', 'max_ammo']:
-                return card.name
-    
-    # 아니면 첫 번째 카드
-    return cards[0].name
-
-# 여기서부터 커스터마이징 시작!
+    tower.shoot(closest)
 </textarea>
         </div>
     </div>
 
     <script>
         let pyodide = null;
-        let gameState = null;
+        let gameState = null; // 나중에 초기화
         let animationId = null;
         let isRunning = false;
+        let isPaused = false;
+        let gameSpeed = 1; // 1x, 2x 속도
+        let debugMode = false;
+        
+        // 스크립트 관리
+        let scripts = {
+            'default': `# 기본 AI
+def ai_logic(tower, zombies):
+    if not zombies or tower.ammo <= 0:
+        return
+    
+    in_range = [z for z in zombies if z.distance < 200]
+    if not in_range:
+        return
+    
+    closest = min(in_range, key=lambda z: z.distance)
+    print(f"[default] 공격: {closest.type} (거리: {closest.distance:.1f})")
+    tower.shoot(closest)`,
+            'tower2': `# 보너스 우선 AI
+def ai_logic(tower, zombies):
+    if not zombies or tower.ammo <= 0:
+        return
+    
+    in_range = [z for z in zombies if z.distance < 200]
+    if not in_range:
+        return
+    
+    # bonus 우선
+    bonus = [z for z in in_range if z.type == 'bonus']
+    if bonus:
+        target = min(bonus, key=lambda z: z.distance)
+        print(f"[tower2] 보너스 발견! 공격!")
+        tower.shoot(target)
+        return
+    
+    closest = min(in_range, key=lambda z: z.distance)
+    tower.shoot(closest)`
+        };
+        
+        let currentScript = 'default';
+        let compiledScripts = {};
 
-        // 게임 상태 클래스
         class GameState {
             constructor() {
                 this.level = 1;
@@ -320,217 +371,49 @@ def on_boss_defeated(tower, cards):
                 this.maxAmmo = 100;
                 this.ammoRegenRate = 0.5;
                 this.zombies = [];
-                this.tower = { x: 100, y: 200 };
+                this.towers = [
+                    { id: 0, x: 100, y: 150, scriptName: 'default', shootCooldown: 0 },
+                    { id: 1, x: 100, y: 250, scriptName: 'tower2', shootCooldown: 0 }
+                ];
+                this.selectedTowerId = null;
                 this.bullets = [];
                 this.frameCount = 0;
                 this.spawnTimer = 0;
-                this.spawnInterval = 120;
-                this.shootCooldown = 0;
-                this.shootCooldownTime = 30;
                 this.damage = 1;
                 this.bossSpawned = false;
-                this.isPaused = false;  // 카드 선택 중 일시정지
-                this.pendingCards = null;  // 선택 대기 중인 카드들
-                this.selectedUpgrades = {};  // 선택한 업그레이드 카운트 {name: {description, count}}
-                
-                // 타워 업그레이드 상태
-                this.towerUpgrades = {
-                    hasPenetration: false,
-                    hasExplosion: false,
-                    hasMultiShot: false,
-                    hasAutoAttack: false,
-                    criticalChance: 0,
-                    bonusSpawnRate: 1.0,
-                    defenseBuffer: 0
-                };
+                this.selectedUpgrades = {};
             }
 
             spawnZombie() {
-                // 5레벨마다 보스 스폰 (한 번만)
                 if (this.level % 5 === 0 && !this.bossSpawned) {
                     this.zombies.push({
-                        x: 600,
-                        y: 180,
-                        hp: 15 + this.level * 2,  // 엄청 높은 HP
-                        maxHp: 15 + this.level * 2,
-                        speed: 0.2,  // 느림
-                        type: 'boss',
-                        id: Date.now() + Math.random(),
-                        size: 60  // 크기
+                        x: 600, y: 180, hp: 15 + this.level * 2, maxHp: 15 + this.level * 2,
+                        speed: 0.2, type: 'boss', size: 60
                     });
                     this.bossSpawned = true;
-                    log('🔥 거대 좀비 출현! 집중 공격 필요!', 'warning');
+                    log('🔥 보스 출현!', 'warning');
                     return;
                 }
                 
-                // 랜덤으로 좀비 타입 선택
                 const rand = Math.random();
-                
-                // 보너스 출현률 업그레이드 적용
-                const bonusChance = 0.1 * this.towerUpgrades.bonusSpawnRate;
-                
-                if (rand < bonusChance) {
-                    // 10% - 보너스 좀비 (맞추면 데미지 업그레이드!)
-                    this.zombies.push({
-                        x: 600,
-                        y: 150 + Math.random() * 100,
-                        hp: 1,
-                        maxHp: 1,
-                        speed: 1.5,  // 빠름!
-                        type: 'bonus',
-                        id: Date.now() + Math.random()
-                    });
+                if (rand < 0.1) {
+                    this.zombies.push({ x: 600, y: 150 + Math.random() * 100, hp: 1, maxHp: 1, speed: 1.5, type: 'bonus' });
                 } else if (rand < 0.35) {
-                    // 25% - vulnerable
-                    this.zombies.push({
-                        x: 600,
-                        y: 150 + Math.random() * 100,
-                        hp: 999,
-                        maxHp: 999,
-                        speed: 0.3 + this.level * 0.05,
-                        type: 'vulnerable',
-                        id: Date.now() + Math.random(),
-                        isVulnerable: false,
-                        vulnerableTimer: 0,
-                        vulnerableCycle: 120
-                    });
+                    this.zombies.push({ x: 600, y: 150 + Math.random() * 100, hp: 999, maxHp: 999, speed: 0.3, type: 'vulnerable', isVulnerable: false, vulnerableTimer: 0 });
                 } else {
-                    // 65% - basic
-                    this.zombies.push({
-                        x: 600,
-                        y: 150 + Math.random() * 100,
-                        hp: 1,
-                        maxHp: 1,
-                        speed: 0.5 + this.level * 0.1,
-                        type: 'basic',
-                        id: Date.now() + Math.random()
-                    });
+                    this.zombies.push({ x: 600, y: 150 + Math.random() * 100, hp: 1, maxHp: 1, speed: 0.5, type: 'basic' });
                 }
             }
 
-            getRandomCards() {
-                // 카드 풀
-                const allCards = [
-                    { name: 'rapid_fire', description: '🔥 연사 - 발사속도 +50%', effect: () => {
-                        this.shootCooldownTime = Math.max(10, Math.floor(this.shootCooldownTime * 0.5));
-                        log('연사 업그레이드! 발사속도 2배!', 'success');
-                    }},
-                    { name: 'ammo_regen', description: '💰 탄약재생 - 재생속도 2배', effect: () => {
-                        this.ammoRegenRate *= 2;
-                        log('탄약 재생속도 2배!', 'success');
-                    }},
-                    { name: 'penetration', description: '🎯 관통탄 - 2마리 관통', effect: () => {
-                        this.towerUpgrades.hasPenetration = true;
-                        log('관통탄 획득! 한 발로 2마리!', 'success');
-                    }},
-                    { name: 'explosion', description: '💣 폭발탄 - 범위 데미지', effect: () => {
-                        this.towerUpgrades.hasExplosion = true;
-                        log('폭발탄 획득! 광역 공격!', 'success');
-                    }},
-                    { name: 'defense', description: '🛡️ 방어막 - 버틸수있는 좀비 +5', effect: () => {
-                        this.towerUpgrades.defenseBuffer += 5;
-                        log('방어막 강화! +5 여유', 'success');
-                    }},
-                    { name: 'multi_shot', description: '🎪 멀티샷 - 3발 동시발사', effect: () => {
-                        this.towerUpgrades.hasMultiShot = true;
-                        log('멀티샷 획득! 3발 동시발사!', 'success');
-                    }},
-                    { name: 'critical', description: '🌟 크리티컬 - 20% 3배 데미지', effect: () => {
-                        this.towerUpgrades.criticalChance += 0.2;
-                        log('크리티컬 확률 +20%!', 'success');
-                    }},
-                    { name: 'lucky', description: '🎲 행운 - 보너스 출현 2배', effect: () => {
-                        this.towerUpgrades.bonusSpawnRate *= 2;
-                        log('보너스 좀비 출현률 2배!', 'success');
-                    }},
-                    { name: 'reload', description: '🔄 재장전 - 탄약 전부 회복', effect: () => {
-                        this.ammo = this.maxAmmo;
-                        log('탄약 전부 회복!', 'success');
-                    }},
-                    { name: 'damage_up', description: '⚔️ 화력증강 - 데미지 +2', effect: () => {
-                        this.damage += 2;
-                        log('데미지 +2!', 'success');
-                    }},
-                    { name: 'max_ammo', description: '📦 탄약고 - 최대탄약 +50', effect: () => {
-                        this.maxAmmo += 50;
-                        this.ammo += 50;
-                        log('최대 탄약 +50!', 'success');
-                    }}
-                ];
-                
-                // 랜덤 3개 선택
-                const shuffled = allCards.sort(() => Math.random() - 0.5);
-                return shuffled.slice(0, 3);
-            }
-
-            applyCard(cardName) {
-                const card = this.pendingCards.find(c => c.name === cardName);
-                if (card) {
-                    card.effect();
-                    
-                    // 업그레이드 카운트 추가
-                    if (!this.selectedUpgrades[cardName]) {
-                        this.selectedUpgrades[cardName] = {
-                            description: card.description,
-                            count: 1
-                        };
-                    } else {
-                        this.selectedUpgrades[cardName].count++;
-                    }
-                    
-                    this.updateUpgradeDisplay();
-                }
-                this.pendingCards = null;
-                this.isPaused = false;
-            }
-
-            updateUpgradeDisplay() {
-                const upgradeList = document.getElementById('upgradeList');
-                
-                if (Object.keys(this.selectedUpgrades).length === 0) {
-                    upgradeList.innerHTML = '<div style="color: #858585; font-size: 13px; padding: 8px;">없음</div>';
-                    return;
-                }
-                
-                // 카드 형태로 표시
-                upgradeList.innerHTML = Object.entries(this.selectedUpgrades)
-                    .map(([name, data]) => {
-                        const countBadge = data.count > 1 
-                            ? `<span style="position: absolute; top: -8px; right: -8px; background: #c72e2e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid #252526;">${data.count}</span>`
-                            : '';
-                        
-                        return `
-                            <div style="position: relative; background: #1e1e1e; border: 2px solid #4ec9b0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #d4d4d4; min-width: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                                ${countBadge}
-                                ${data.description.split(' - ')[0]}
-                            </div>
-                        `;
-                    })
-                    .join('');
-            }
-
-
-            update(userAI) {
-                // 카드 선택 중이면 업데이트 안함
-                if (this.isPaused) {
-                    return;
-                }
-                
+            update() {
                 this.frameCount++;
                 this.spawnTimer++;
-                
-                // 발사 쿨다운 감소
-                if (this.shootCooldown > 0) {
-                    this.shootCooldown--;
-                }
 
-                // 좀비 스폰
-                if (this.spawnTimer >= this.spawnInterval) {
+                if (this.spawnTimer >= 120) {
                     this.spawnZombie();
                     this.spawnTimer = 0;
                 }
 
-                // 탄약 재생
                 if (this.ammo < this.maxAmmo) {
                     this.ammo = Math.min(this.maxAmmo, this.ammo + this.ammoRegenRate);
                 }
@@ -538,17 +421,54 @@ def on_boss_defeated(tower, cards):
                 // 좀비 이동
                 for (let zombie of this.zombies) {
                     zombie.x -= zombie.speed;
-                    zombie.distance = Math.sqrt(
-                        Math.pow(zombie.x - this.tower.x, 2) +
-                        Math.pow(zombie.y - this.tower.y, 2)
-                    );
                     
-                    // vulnerable 타입 좀비의 상태 토글
                     if (zombie.type === 'vulnerable') {
                         zombie.vulnerableTimer++;
-                        if (zombie.vulnerableTimer >= zombie.vulnerableCycle) {
+                        if (zombie.vulnerableTimer >= 120) {
                             zombie.isVulnerable = !zombie.isVulnerable;
                             zombie.vulnerableTimer = 0;
+                        }
+                    }
+                }
+
+                // 각 타워별로 AI 실행
+                for (let tower of this.towers) {
+                    if (tower.shootCooldown > 0) {
+                        tower.shootCooldown--;
+                    }
+                    
+                    // 타워별 거리 계산
+                    const zombiesWithDistance = this.zombies.map((z, idx) => ({
+                        ...z,
+                        distance: Math.sqrt(Math.pow(z.x - tower.x, 2) + Math.pow(z.y - tower.y, 2)),
+                        index: idx
+                    }));
+
+                    // 타워 AI 실행
+                    const scriptFunc = compiledScripts[tower.scriptName];
+                    if (scriptFunc) {
+                        const towerAPI = {
+                            ammo: Math.floor(this.ammo),
+                            position: { x: tower.x, y: tower.y },
+                            shoot: (zombie) => {
+                                if (tower.shootCooldown > 0 || this.ammo < 1) return;
+                                const actualZombie = this.zombies[zombie.index];
+                                if (actualZombie && !actualZombie.dead) {
+                                    this.ammo -= 1;
+                                    tower.shootCooldown = 30;
+                                    this.bullets.push({
+                                        x: tower.x, y: tower.y,
+                                        target: actualZombie,
+                                        speed: 8
+                                    });
+                                }
+                            }
+                        };
+
+                        try {
+                            scriptFunc(towerAPI, zombiesWithDistance);
+                        } catch (e) {
+                            console.error(`Tower ${tower.id} AI error:`, e);
                         }
                     }
                 }
@@ -561,51 +481,29 @@ def on_boss_defeated(tower, cards):
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         
                         if (dist < 5) {
-                            const target = bullet.target;
-                            
-                            // vulnerable 타입은 공격 가능 상태일 때만 데미지
-                            if (target.type === 'vulnerable') {
-                                if (target.isVulnerable) {
-                                    target.dead = true;
-                                    this.score += 20;
-                                    this.ammo += 3;
-                                    log('Vulnerable 좀비 처치!', 'success');
-                                } else {
-                                    log('공격 실패! 좀비가 무적 상태입니다.', 'warning');
-                                }
-                            } 
-                            // 보너스 좀비 - 데미지 업그레이드!
-                            else if (target.type === 'bonus') {
-                                target.hp -= this.damage;
-                                if (target.hp <= 0) {
-                                    target.dead = true;
-                                    this.damage += 1;  // 데미지 증가!
+                            if (bullet.target.type === 'vulnerable' && bullet.target.isVulnerable) {
+                                bullet.target.dead = true;
+                                this.score += 20;
+                                this.ammo += 3;
+                            } else if (bullet.target.type === 'bonus') {
+                                bullet.target.hp -= this.damage;
+                                if (bullet.target.hp <= 0) {
+                                    bullet.target.dead = true;
+                                    this.damage += 1;
                                     this.score += 50;
-                                    this.ammo += 10;
-                                    log(`💥 보너스 획득! 데미지 ${this.damage}로 업그레이드!`, 'success');
+                                    log('💥 보너스! 데미지 +1', 'success');
                                 }
-                            }
-                            // 보스 좀비
-                            else if (target.type === 'boss') {
-                                target.hp -= this.damage;
-                                if (target.hp <= 0) {
-                                    target.dead = true;
+                            } else if (bullet.target.type === 'boss') {
+                                bullet.target.hp -= this.damage;
+                                if (bullet.target.hp <= 0) {
+                                    bullet.target.dead = true;
                                     this.score += 100;
-                                    this.ammo += 20;
-                                    log('🏆 보스 처치 성공! 카드 선택 대기...', 'success');
-                                    
-                                    // 카드 선택 시작
-                                    this.isPaused = true;
-                                    this.pendingCards = this.getRandomCards();
-                                } else {
-                                    log(`보스 HP: ${target.hp}/${target.maxHp}`, 'info');
+                                    log('🏆 보스 처치!', 'success');
                                 }
-                            }
-                            // 일반 좀비
-                            else {
-                                target.hp -= this.damage;
-                                if (target.hp <= 0) {
-                                    target.dead = true;
+                            } else if (bullet.target.type !== 'vulnerable') {
+                                bullet.target.hp -= this.damage;
+                                if (bullet.target.hp <= 0) {
+                                    bullet.target.dead = true;
                                     this.score += 10;
                                     this.ammo += 2;
                                 }
@@ -620,172 +518,75 @@ def on_boss_defeated(tower, cards):
                     }
                 }
 
-                // 죽은 객체 제거
                 this.zombies = this.zombies.filter(z => !z.dead && z.x > -50);
                 this.bullets = this.bullets.filter(b => !b.dead);
 
-                // 게임 오버 체크
-                const escaped = this.zombies.filter(z => z.x < this.tower.x);
-                const allowedEscaped = 5 + this.towerUpgrades.defenseBuffer;
-                if (escaped.length > allowedEscaped) {
-                    log('게임 오버! 좀비들이 타워에 도달했습니다!', 'error');
-                    stopGame();
-                    return;
-                }
-
-                // 레벨업 체크
+                // 레벨업
                 if (this.score > this.level * 100) {
                     this.level++;
-                    log(`레벨 ${this.level}!`, 'success');
-                    
-                    // 다음 보스 레벨을 위해 플래그 리셋
-                    if (this.level % 5 === 1) {
-                        this.bossSpawned = false;
-                    }
+                    if (this.level % 5 === 1) this.bossSpawned = false;
                 }
 
-                // 사용자 AI 실행
-                try {
-                    // 카드 선택이 필요한 경우
-                    if (this.isPaused && this.pendingCards) {
-                        const cardData = this.pendingCards.map(c => ({
-                            name: c.name,
-                            description: c.description
-                        }));
-                        
-                        const towerData = {
-                            damage: this.damage,
-                            ammo: Math.floor(this.ammo),
-                            maxAmmo: this.maxAmmo,
-                            upgrades: this.towerUpgrades
-                        };
-                        
-                        // 사용자가 정의한 on_boss_defeated 함수 호출
-                        if (window.userCardSelector) {
-                            const choice = window.userCardSelector(towerData, cardData);
-                            if (choice && this.pendingCards.find(c => c.name === choice)) {
-                                this.applyCard(choice);
-                            } else {
-                                // 잘못된 선택이면 첫 번째 카드 자동 선택
-                                log('잘못된 카드 선택! 첫 번째 카드 자동 선택', 'warning');
-                                this.applyCard(this.pendingCards[0].name);
-                            }
-                        } else {
-                            // 함수 없으면 첫 번째 카드 자동 선택
-                            this.applyCard(this.pendingCards[0].name);
-                        }
-                        return;
-                    }
-                    
-                    const gameStateRef = this;
-                    const towerAPI = {
-                        ammo: Math.floor(this.ammo),
-                        position: { x: this.tower.x, y: this.tower.y },
-                        shoot: (zombie) => {
-                            // 쿨다운 체크!
-                            if (gameStateRef.shootCooldown > 0) {
-                                return; // 쿨다운 중이면 발사 불가
-                            }
-                            
-                            // 좀비 객체에서 인덱스 찾기
-                            const zombieIndex = zombie.index;
-                            const actualZombie = gameStateRef.zombies[zombieIndex];
-                            
-                            if (gameStateRef.ammo >= 1 && actualZombie && !actualZombie.dead) {
-                                gameStateRef.ammo -= 1;
-                                gameStateRef.shootCooldown = gameStateRef.shootCooldownTime; // 쿨다운 시작
-                                gameStateRef.bullets.push({
-                                    x: gameStateRef.tower.x,
-                                    y: gameStateRef.tower.y,
-                                    target: actualZombie,
-                                    speed: 8,
-                                    dead: false
-                                });
-                            }
-                        }
-                    };
-
-                    const zombieData = this.zombies.map((z, index) => ({
-                        distance: z.distance,
-                        hp: z.hp,
-                        type: z.type,
-                        x: z.x,
-                        y: z.y,
-                        index: index,
-                        isVulnerable: z.isVulnerable !== undefined ? z.isVulnerable : true  // vulnerable 타입만 이 속성 있음
-                    }));
-
-                    userAI(towerAPI, zombieData);
-                } catch (e) {
-                    log(`AI 에러: ${e.message}`, 'error');
+                // 게임오버
+                const escaped = this.zombies.filter(z => z.x < 50);
+                if (escaped.length > 5) {
+                    log('게임 오버!', 'error');
                     stopGame();
                 }
             }
 
             draw(ctx) {
                 ctx.clearRect(0, 0, 600, 400);
-
-                // 배경
                 ctx.fillStyle = '#1e1e1e';
                 ctx.fillRect(0, 0, 600, 400);
 
                 // 그리드
                 ctx.strokeStyle = '#2e2e2e';
-                ctx.lineWidth = 1;
                 for (let i = 0; i < 600; i += 50) {
-                    ctx.beginPath();
-                    ctx.moveTo(i, 0);
-                    ctx.lineTo(i, 400);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 400); ctx.stroke();
                 }
                 for (let i = 0; i < 400; i += 50) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, i);
-                    ctx.lineTo(600, i);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(600, i); ctx.stroke();
                 }
 
-                // 타워
-                ctx.fillStyle = '#4ec9b0';
-                ctx.fillRect(this.tower.x - 20, this.tower.y - 20, 40, 40);
-                ctx.fillStyle = '#569cd6';
-                ctx.fillRect(this.tower.x - 10, this.tower.y - 30, 20, 15);
+                // 타워들
+                for (let tower of this.towers) {
+                    const isSelected = tower.id === this.selectedTowerId;
+                    ctx.fillStyle = isSelected ? '#0e639c' : '#4ec9b0';
+                    ctx.fillRect(tower.x - 20, tower.y - 20, 40, 40);
+                    ctx.fillStyle = '#569cd6';
+                    ctx.fillRect(tower.x - 10, tower.y - 30, 20, 15);
+                    
+                    // 스크립트 이름 표시
+                    ctx.fillStyle = '#dcdcaa';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(tower.scriptName, tower.x, tower.y - 35);
+                    
+                    // 선택 표시
+                    if (isSelected) {
+                        ctx.strokeStyle = '#0e639c';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(tower.x - 25, tower.y - 25, 50, 50);
+                    }
+                }
 
                 // 좀비들
                 for (let zombie of this.zombies) {
-                    // 좀비 타입별 색상과 크기
-                    let zombieColor;
-                    let size = zombie.size || 30;
+                    let color, size = zombie.size || 30;
+                    if (zombie.type === 'boss') color = '#9b59b6';
+                    else if (zombie.type === 'bonus') color = '#00ffff';
+                    else if (zombie.type === 'vulnerable') color = zombie.isVulnerable ? '#ff8800' : '#ffcc00';
+                    else color = '#c72e2e';
                     
-                    if (zombie.type === 'boss') {
-                        zombieColor = '#9b59b6';  // 보라색
-                        size = zombie.size || 60;
-                    } else if (zombie.type === 'bonus') {
-                        zombieColor = '#00ffff';  // 시안 (청록색)
-                    } else if (zombie.type === 'vulnerable') {
-                        zombieColor = zombie.isVulnerable ? '#ff8800' : '#ffcc00';
-                    } else {
-                        zombieColor = zombie.hp > zombie.maxHp / 2 ? '#c72e2e' : '#8b0000';
-                    }
-                    
-                    ctx.fillStyle = zombieColor;
+                    ctx.fillStyle = color;
                     ctx.fillRect(zombie.x - size/2, zombie.y - size/2, size, size);
                     
-                    // HP 바
                     if (zombie.type === 'boss' || zombie.type === 'basic') {
                         ctx.fillStyle = '#3e3e42';
                         ctx.fillRect(zombie.x - size/2, zombie.y - size/2 - 10, size, 5);
                         ctx.fillStyle = '#4ec9b0';
                         ctx.fillRect(zombie.x - size/2, zombie.y - size/2 - 10, size * (zombie.hp / zombie.maxHp), 5);
-                    } else if (zombie.type === 'vulnerable') {
-                        // vulnerable 상태 표시
-                        ctx.fillStyle = zombie.isVulnerable ? '#ff8800' : '#666666';
-                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30, 5);
-                    } else if (zombie.type === 'bonus') {
-                        // 보너스 표시 (별 모양으로?)
-                        ctx.fillStyle = '#ffff00';
-                        ctx.font = 'bold 20px Arial';
-                        ctx.fillText('⭐', zombie.x - 10, zombie.y - 20);
                     }
                 }
 
@@ -805,85 +606,116 @@ def on_boss_defeated(tower, cards):
             }
         }
 
-        // 로그 함수
         function log(message, type = 'info') {
             const output = document.getElementById('output');
             const timestamp = new Date().toLocaleTimeString();
-            const logClass = `log-${type}`;
-            output.innerHTML += `<div class="${logClass}">[${timestamp}] ${message}</div>`;
+            output.innerHTML += `<div class="log-${type}">[${timestamp}] ${message}</div>`;
             output.scrollTop = output.scrollHeight;
         }
+        
+        // log 함수를 전역으로 노출 (Python에서 접근 가능)
+        window.log = log;
 
-        // Pyodide 초기화
         async function initPyodide() {
             log('Pyodide 로딩 중...', 'info');
             pyodide = await loadPyodide();
-            log('Pyodide 로딩 완료!', 'success');
+            log('Pyodide 준비 완료!', 'success');
             document.getElementById('runBtn').disabled = false;
         }
 
-        // 게임 루프
         function gameLoop() {
             if (!isRunning) return;
-
-            gameState.update(window.userAIFunction);
+            
+            // 일시정지 중이 아닐 때만 업데이트
+            if (!isPaused) {
+                // 속도에 따라 여러 프레임 실행
+                for (let i = 0; i < gameSpeed; i++) {
+                    gameState.update();
+                }
+            }
             
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             gameState.draw(ctx);
-
+            
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        // 게임 실행
+        async function compileScripts() {
+            compiledScripts = {};
+            
+            // Python print 함수를 JavaScript log로 연결
+            pyodide.runPython(`
+import sys
+from js import log as js_log
+
+class GameLogger:
+    def write(self, text):
+        if text.strip():
+            js_log(text.strip(), 'info')
+    
+    def flush(self):
+        pass
+
+sys.stdout = GameLogger()
+sys.stderr = GameLogger()
+`);
+            
+            for (let [name, code] of Object.entries(scripts)) {
+                try {
+                    await pyodide.runPythonAsync(code);
+                    compiledScripts[name] = pyodide.globals.get('ai_logic').toJs();
+                } catch (e) {
+                    log(`스크립트 "${name}" 컴파일 실패: ${e.message}`, 'error');
+                }
+            }
+        }
+
         async function runGame() {
             if (isRunning) return;
-
-            const code = document.getElementById('codeEditor').value;
             
             try {
-                log('코드 실행 중...', 'info');
+                log('스크립트 컴파일 중...', 'info');
+                await compileScripts();
+                log('게임 시작!', 'success');
                 
-                await pyodide.runPythonAsync(code);
+                // gameState는 이미 존재하므로 리셋만
+                gameState.zombies = [];
+                gameState.bullets = [];
+                gameState.frameCount = 0;
+                gameState.spawnTimer = 0;
+                gameState.score = 0;
+                gameState.level = 1;
+                gameState.ammo = 100;
+                gameState.damage = 1;
+                gameState.bossSpawned = false;
                 
-                // Python 함수를 JavaScript로 가져오기
-                window.userAIFunction = pyodide.globals.get('ai_logic').toJs();
-                
-                // 카드 선택 함수 (있으면 가져오기)
-                try {
-                    window.userCardSelector = pyodide.globals.get('on_boss_defeated').toJs();
-                } catch (e) {
-                    window.userCardSelector = null;
-                    log('on_boss_defeated 함수 없음 - 자동 선택', 'warning');
-                }
-                
-                log('코드 실행 성공! 게임 시작!', 'success');
-                
-                gameState = new GameState();
                 isRunning = true;
+                isPaused = false;
                 
                 document.getElementById('runBtn').disabled = true;
                 document.getElementById('stopBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stepBtn').disabled = false;
                 
                 gameLoop();
             } catch (e) {
                 log(`에러: ${e.message}`, 'error');
-                console.error(e);
             }
         }
 
-        // 게임 정지
         function stopGame() {
             isRunning = false;
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
+            isPaused = false;
+            if (animationId) cancelAnimationFrame(animationId);
             document.getElementById('runBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = '⏸ 일시정지';
+            document.getElementById('stepBtn').disabled = true;
             log('게임 정지', 'warning');
         }
 
-        // 리셋
         function resetGame() {
             stopGame();
             gameState = new GameState();
@@ -891,16 +723,195 @@ def on_boss_defeated(tower, cards):
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, 600, 400);
             document.getElementById('output').innerHTML = '';
-            log('게임 리셋 완료', 'info');
+            log('게임 리셋', 'info');
         }
 
-        // 이벤트 리스너
+        // 스크립트 탭 UI
+        function renderScriptTabs() {
+            const container = document.getElementById('scriptTabs');
+            container.innerHTML = Object.keys(scripts).map(name => `
+                <div class="script-tab ${name === currentScript ? 'active' : ''}" data-script="${name}">
+                    <input type="text" value="${name}" onchange="renameScript('${name}', this.value)" onclick="event.stopPropagation()">
+                    ${Object.keys(scripts).length > 1 ? `<span class="close" onclick="deleteScript('${name}'); event.stopPropagation()">×</span>` : ''}
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.script-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    currentScript = tab.dataset.script;
+                    document.getElementById('codeEditor').value = scripts[currentScript];
+                    renderScriptTabs();
+                });
+            });
+        }
+
+        function renderTowerList() {
+            const container = document.getElementById('towerList');
+            
+            container.innerHTML = gameState.towers.map(tower => `
+                <div class="tower-item ${tower.id === gameState.selectedTowerId ? 'selected' : ''}" onclick="selectTower(${tower.id})">
+                    <strong>타워 #${tower.id + 1}</strong> (${tower.x}, ${tower.y})
+                    <div class="tower-script-select">
+                        <select onchange="changeTowerScript(${tower.id}, this.value)" onclick="event.stopPropagation()">
+                            ${Object.keys(scripts).map(name => 
+                                `<option value="${name}" ${tower.scriptName === name ? 'selected' : ''}>${name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectTower(id) {
+            gameState.selectedTowerId = id;
+            renderTowerList();
+            
+            // 캔버스 다시 그리기 (선택 표시)
+            if (!isRunning) {
+                const canvas = document.getElementById('gameCanvas');
+                const ctx = canvas.getContext('2d');
+                gameState.draw(ctx);
+            }
+        }
+
+        function changeTowerScript(towerId, scriptName) {
+            const tower = gameState.towers.find(t => t.id === towerId);
+            if (tower) {
+                tower.scriptName = scriptName;
+                log(`타워 #${towerId + 1}의 스크립트를 "${scriptName}"으로 변경`, 'info');
+                
+                // 캔버스 다시 그리기 (스크립트 이름 표시 업데이트)
+                if (!isRunning) {
+                    const canvas = document.getElementById('gameCanvas');
+                    const ctx = canvas.getContext('2d');
+                    gameState.draw(ctx);
+                }
+            }
+        }
+
+        function renameScript(oldName, newName) {
+            if (newName && newName !== oldName && !scripts[newName]) {
+                scripts[newName] = scripts[oldName];
+                delete scripts[oldName];
+                if (currentScript === oldName) currentScript = newName;
+                
+                // 타워 스크립트 이름도 변경
+                if (gameState) {
+                    gameState.towers.forEach(t => {
+                        if (t.scriptName === oldName) t.scriptName = newName;
+                    });
+                }
+                
+                renderScriptTabs();
+                renderTowerList();
+            }
+        }
+
+        function deleteScript(name) {
+            if (Object.keys(scripts).length <= 1) return;
+            delete scripts[name];
+            if (currentScript === name) {
+                currentScript = Object.keys(scripts)[0];
+                document.getElementById('codeEditor').value = scripts[currentScript];
+            }
+            renderScriptTabs();
+        }
+
+        // 캔버스 클릭으로 타워 선택
+        document.getElementById('gameCanvas').addEventListener('click', (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            for (let tower of gameState.towers) {
+                if (Math.abs(x - tower.x) < 25 && Math.abs(y - tower.y) < 25) {
+                    selectTower(tower.id);
+                    return;
+                }
+            }
+        });
+
+        // 새 스크립트 추가
+        document.getElementById('newScriptBtn').addEventListener('click', () => {
+            const newName = `script${Object.keys(scripts).length + 1}`;
+            scripts[newName] = `# 새 스크립트
+def ai_logic(tower, zombies):
+    if not zombies or tower.ammo <= 0:
+        return
+    
+    in_range = [z for z in zombies if z.distance < 200]
+    if in_range:
+        tower.shoot(min(in_range, key=lambda z: z.distance))`;
+        currentScript = newName;
+            document.getElementById('codeEditor').value = scripts[newName];
+            renderScriptTabs();
+        });
+
+        // 코드 저장
+        document.getElementById('codeEditor').addEventListener('input', (e) => {
+            scripts[currentScript] = e.target.value;
+        });
+
         document.getElementById('runBtn').addEventListener('click', runGame);
         document.getElementById('stopBtn').addEventListener('click', stopGame);
         document.getElementById('resetBtn').addEventListener('click', resetGame);
+        
+        // 일시정지 버튼
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (!isRunning) return;
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            if (isPaused) {
+                btn.textContent = '▶ 재개';
+                log('일시정지', 'warning');
+            } else {
+                btn.textContent = '⏸ 일시정지';
+                log('재개', 'info');
+            }
+        });
+        
+        // 1프레임 실행 버튼
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            if (!isRunning) return;
+            
+            // 일시정지 상태가 아니면 먼저 일시정지
+            if (!isPaused) {
+                isPaused = true;
+                document.getElementById('pauseBtn').textContent = '▶ 재개';
+            }
+            
+            // 한 프레임만 실행
+            gameState.update();
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            gameState.draw(ctx);
+            
+            log(`프레임 ${gameState.frameCount} 실행`, 'info');
+        });
+        
+        // 속도 변경 버튼
+        document.getElementById('speedBtn').addEventListener('click', () => {
+            if (gameSpeed === 1) {
+                gameSpeed = 2;
+                document.getElementById('speedBtn').textContent = '⚡ 속도: 2x';
+                log('게임 속도 2배', 'success');
+            } else {
+                gameSpeed = 1;
+                document.getElementById('speedBtn').textContent = '⚡ 속도: 1x';
+                log('게임 속도 정상', 'info');
+            }
+        });
 
         // 초기화
+        gameState = new GameState(); // GameState 클래스 정의 후 초기화
         initPyodide();
+        renderScriptTabs();
+        renderTowerList();
+        
+        // 초기 캔버스 그리기
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        gameState.draw(ctx);
     </script>
 </body>
 </html>
