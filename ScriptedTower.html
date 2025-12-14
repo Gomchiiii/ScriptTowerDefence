@@ -268,6 +268,8 @@ def ai_logic(tower, zombies):
                 this.frameCount = 0;
                 this.spawnTimer = 0;
                 this.spawnInterval = 120;
+                this.shootCooldown = 0;  // 발사 쿨다운
+                this.shootCooldownTime = 30;  // 0.5초 (60fps 기준)
             }
 
             spawnZombie() {
@@ -303,6 +305,11 @@ def ai_logic(tower, zombies):
             update(userAI) {
                 this.frameCount++;
                 this.spawnTimer++;
+                
+                // 발사 쿨다운 감소
+                if (this.shootCooldown > 0) {
+                    this.shootCooldown--;
+                }
 
                 // 좀비 스폰
                 if (this.spawnTimer >= this.spawnInterval) {
@@ -395,10 +402,16 @@ def ai_logic(tower, zombies):
                         ammo: Math.floor(this.ammo),
                         position: { x: this.tower.x, y: this.tower.y },
                         shoot: (zombieIndex) => {
+                            // 쿨다운 체크!
+                            if (gameStateRef.shootCooldown > 0) {
+                                return; // 쿨다운 중이면 발사 불가
+                            }
+                            
                             // 인덱스로 직접 찾기
                             const zombie = gameStateRef.zombies[zombieIndex];
                             if (gameStateRef.ammo >= 1 && zombie && !zombie.dead) {
                                 gameStateRef.ammo -= 1;
+                                gameStateRef.shootCooldown = gameStateRef.shootCooldownTime; // 쿨다운 시작
                                 gameStateRef.bullets.push({
                                     x: gameStateRef.tower.x,
                                     y: gameStateRef.tower.y,
