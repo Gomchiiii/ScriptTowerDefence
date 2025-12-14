@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타워 디펜스 코딩 게임</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #252526;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #3e3e42;
+        }
+        
+        h1 {
+            color: #4ec9b0;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        h2 {
+            color: #569cd6;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            background: #1e1e1e;
+            border: 2px solid #4ec9b0;
+            border-radius: 4px;
+            display: block;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #3e3e42;
+        }
+        
+        .stat-label {
+            color: #858585;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #4ec9b0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        #codeEditor {
+            width: 100%;
+            height: 400px;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            color: #d4d4d4;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #1177bb;
+        }
+        
+        button:disabled {
+            background: #3e3e42;
+            cursor: not-allowed;
+        }
+        
+        button.danger {
+            background: #c72e2e;
+        }
+        
+        button.danger:hover {
+            background: #e03e3e;
+        }
+        
+        #output {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .log-info {
+            color: #4ec9b0;
+        }
+        
+        .log-error {
+            color: #f48771;
+        }
+        
+        .log-warning {
+            color: #dcdcaa;
+        }
+        
+        .log-success {
+            color: #4ec9b0;
+        }
+        
+        .template-info {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #569cd6;
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h1>🎮 타워 디펜스 코딩 게임</h1>
+            
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">레벨</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">남은 탄약</div>
+                    <div class="stat-value" id="ammo">100</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">점수</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="runBtn">▶ 실행</button>
+                <button id="stopBtn" class="danger" disabled>■ 정지</button>
+                <button id="resetBtn">↻ 리셋</button>
+            </div>
+            
+            <h2>📋 로그</h2>
+            <div id="output"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>💻 파이썬 코드</h2>
+            
+            <div class="template-info">
+                <strong>사용 가능한 API:</strong><br>
+                • <code>zombies</code> - 좀비 리스트 (distance, hp, type, isVulnerable, index)<br>
+                • <code>zombie.type</code> - 'basic' 또는 'vulnerable'<br>
+                • <code>zombie.isVulnerable</code> - True일 때만 공격 가능 (vulnerable 타입)<br>
+                • <code>tower.shoot(index)</code> - 좀비 인덱스로 공격<br>
+                • <code>tower.ammo</code> - 남은 탄약<br>
+                • <code>tower.position</code> - 타워 위치
+            </div>
+            
+            <textarea id="codeEditor" spellcheck="false"># 타워 AI 코드를 작성하세요!
+
+def ai_logic(tower, zombies):
+    """
+    매 프레임마다 호출됩니다.
+    
+    Args:
+        tower: 타워 객체 (shoot 메서드 사용 가능)
+        zombies: 좀비 리스트
+    """
+    
+    if not zombies or tower.ammo <= 0:
+        return
+    
+    # 가장 가까운 좀비 찾기
+    closest = min(zombies, key=lambda z: z.distance)
+    
+    # 사거리 체크
+    if closest.distance >= 200:
+        return
+    
+    # 좀비 타입별 처리
+    if closest.type == 'basic':
+        # 기본 좀비는 바로 공격
+        tower.shoot(closest.index)
+    elif closest.type == 'vulnerable':
+        # vulnerable 좀비는 공격 가능할 때만!
+        if closest.isVulnerable:
+            tower.shoot(closest.index)
+
+# 여기서부터 코드를 수정하세요!
+# 힌트: vulnerable 좀비를 우선 공격하면 점수가 더 높아요!
+</textarea>
+        </div>
+    </div>
+
+    <script>
+        let pyodide = null;
+        let gameState = null;
+        let animationId = null;
+        let isRunning = false;
+
+        // 게임 상태 클래스
+        class GameState {
+            constructor() {
+                this.level = 1;
+                this.score = 0;
+                this.ammo = 100;
+                this.maxAmmo = 100;
+                this.ammoRegenRate = 0.5;
+                this.zombies = [];
+                this.tower = { x: 100, y: 200 };
+                this.bullets = [];
+                this.frameCount = 0;
+                this.spawnTimer = 0;
+                this.spawnInterval = 120;
+            }
+
+            spawnZombie() {
+                // 랜덤으로 좀비 타입 선택 (30% 확률로 vulnerable)
+                const isVulnerable = Math.random() < 0.3;
+                
+                if (isVulnerable) {
+                    this.zombies.push({
+                        x: 600,
+                        y: 150 + Math.random() * 100,
+                        hp: 999, // 엄청 높은 HP (vulnerable할 때만 죽음)
+                        maxHp: 999,
+                        speed: 0.3 + this.level * 0.05,
+                        type: 'vulnerable',
+                        id: Date.now() + Math.random(),
+                        isVulnerable: false, // 공격 가능 상태
+                        vulnerableTimer: 0,
+                        vulnerableCycle: 120 // 2초마다 토글
+                    });
+                } else {
+                    this.zombies.push({
+                        x: 600,
+                        y: 150 + Math.random() * 100,
+                        hp: 1, // 한 방에 죽음
+                        maxHp: 1,
+                        speed: 0.5 + this.level * 0.1,
+                        type: 'basic',
+                        id: Date.now() + Math.random()
+                    });
+                }
+            }
+
+            update(userAI) {
+                this.frameCount++;
+                this.spawnTimer++;
+
+                // 좀비 스폰
+                if (this.spawnTimer >= this.spawnInterval) {
+                    this.spawnZombie();
+                    this.spawnTimer = 0;
+                }
+
+                // 탄약 재생
+                if (this.ammo < this.maxAmmo) {
+                    this.ammo = Math.min(this.maxAmmo, this.ammo + this.ammoRegenRate);
+                }
+
+                // 좀비 이동
+                for (let zombie of this.zombies) {
+                    zombie.x -= zombie.speed;
+                    zombie.distance = Math.sqrt(
+                        Math.pow(zombie.x - this.tower.x, 2) +
+                        Math.pow(zombie.y - this.tower.y, 2)
+                    );
+                    
+                    // vulnerable 타입 좀비의 상태 토글
+                    if (zombie.type === 'vulnerable') {
+                        zombie.vulnerableTimer++;
+                        if (zombie.vulnerableTimer >= zombie.vulnerableCycle) {
+                            zombie.isVulnerable = !zombie.isVulnerable;
+                            zombie.vulnerableTimer = 0;
+                        }
+                    }
+                }
+
+                // 탄약 이동
+                for (let bullet of this.bullets) {
+                    if (bullet.target && !bullet.target.dead) {
+                        const dx = bullet.target.x - bullet.x;
+                        const dy = bullet.target.y - bullet.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 5) {
+                            // vulnerable 타입은 공격 가능 상태일 때만 데미지
+                            if (bullet.target.type === 'vulnerable') {
+                                if (bullet.target.isVulnerable) {
+                                    bullet.target.dead = true;
+                                    this.score += 20; // 더 많은 점수
+                                    this.ammo += 3;
+                                    log('Vulnerable 좀비 처치! (공격 가능 상태)', 'success');
+                                } else {
+                                    log('공격 실패! 좀비가 무적 상태입니다.', 'warning');
+                                }
+                            } else {
+                                // 일반 좀비는 그냥 데미지
+                                bullet.target.hp -= 1;
+                                if (bullet.target.hp <= 0) {
+                                    bullet.target.dead = true;
+                                    this.score += 10;
+                                    this.ammo += 2;
+                                }
+                            }
+                            bullet.dead = true;
+                        } else {
+                            bullet.x += (dx / dist) * bullet.speed;
+                            bullet.y += (dy / dist) * bullet.speed;
+                        }
+                    } else {
+                        bullet.dead = true;
+                    }
+                }
+
+                // 죽은 객체 제거
+                this.zombies = this.zombies.filter(z => !z.dead && z.x > -50);
+                this.bullets = this.bullets.filter(b => !b.dead);
+
+                // 게임 오버 체크
+                const escaped = this.zombies.filter(z => z.x < this.tower.x);
+                if (escaped.length > 5) {
+                    log('게임 오버! 좀비들이 타워에 도달했습니다!', 'error');
+                    stopGame();
+                    return;
+                }
+
+                // 레벨업 체크
+                if (this.score > this.level * 100) {
+                    this.level++;
+                    log(`레벨 ${this.level}! 좀비가 더 강해집니다!`, 'success');
+                }
+
+                // 사용자 AI 실행
+                try {
+                    const gameStateRef = this;
+                    const towerAPI = {
+                        ammo: Math.floor(this.ammo),
+                        position: { x: this.tower.x, y: this.tower.y },
+                        shoot: (zombieIndex) => {
+                            // 인덱스로 직접 찾기
+                            const zombie = gameStateRef.zombies[zombieIndex];
+                            if (gameStateRef.ammo >= 1 && zombie && !zombie.dead) {
+                                gameStateRef.ammo -= 1;
+                                gameStateRef.bullets.push({
+                                    x: gameStateRef.tower.x,
+                                    y: gameStateRef.tower.y,
+                                    target: zombie,
+                                    speed: 8,
+                                    dead: false
+                                });
+                            }
+                        }
+                    };
+
+                    const zombieData = this.zombies.map((z, index) => ({
+                        distance: z.distance,
+                        hp: z.hp,
+                        type: z.type,
+                        x: z.x,
+                        y: z.y,
+                        index: index,
+                        isVulnerable: z.isVulnerable !== undefined ? z.isVulnerable : true  // vulnerable 타입만 이 속성 있음
+                    }));
+
+                    userAI(towerAPI, zombieData);
+                } catch (e) {
+                    log(`AI 에러: ${e.message}`, 'error');
+                    stopGame();
+                }
+            }
+
+            draw(ctx) {
+                ctx.clearRect(0, 0, 600, 400);
+
+                // 배경
+                ctx.fillStyle = '#1e1e1e';
+                ctx.fillRect(0, 0, 600, 400);
+
+                // 그리드
+                ctx.strokeStyle = '#2e2e2e';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 600; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, 400);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < 400; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(600, i);
+                    ctx.stroke();
+                }
+
+                // 타워
+                ctx.fillStyle = '#4ec9b0';
+                ctx.fillRect(this.tower.x - 20, this.tower.y - 20, 40, 40);
+                ctx.fillStyle = '#569cd6';
+                ctx.fillRect(this.tower.x - 10, this.tower.y - 30, 20, 15);
+
+                // 좀비들
+                for (let zombie of this.zombies) {
+                    // 좀비 타입별 색상
+                    let zombieColor;
+                    if (zombie.type === 'vulnerable') {
+                        zombieColor = zombie.isVulnerable ? '#ff8800' : '#ffcc00'; // 주황/노랑
+                    } else {
+                        zombieColor = zombie.hp > zombie.maxHp / 2 ? '#c72e2e' : '#8b0000';
+                    }
+                    
+                    ctx.fillStyle = zombieColor;
+                    ctx.fillRect(zombie.x - 15, zombie.y - 15, 30, 30);
+                    
+                    // HP 바 (vulnerable 타입은 표시 안함)
+                    if (zombie.type !== 'vulnerable') {
+                        ctx.fillStyle = '#3e3e42';
+                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30, 5);
+                        ctx.fillStyle = '#4ec9b0';
+                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30 * (zombie.hp / zombie.maxHp), 5);
+                    } else {
+                        // vulnerable 상태 표시
+                        ctx.fillStyle = zombie.isVulnerable ? '#ff8800' : '#666666';
+                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30, 5);
+                    }
+                }
+
+                // 탄약들
+                for (let bullet of this.bullets) {
+                    ctx.fillStyle = '#dcdcaa';
+                    ctx.beginPath();
+                    ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // UI 업데이트
+                document.getElementById('level').textContent = this.level;
+                document.getElementById('ammo').textContent = Math.floor(this.ammo);
+                document.getElementById('score').textContent = this.score;
+            }
+        }
+
+        // 로그 함수
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const logClass = `log-${type}`;
+            output.innerHTML += `<div class="${logClass}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Pyodide 초기화
+        async function initPyodide() {
+            log('Pyodide 로딩 중...', 'info');
+            pyodide = await loadPyodide();
+            log('Pyodide 로딩 완료!', 'success');
+            document.getElementById('runBtn').disabled = false;
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!isRunning) return;
+
+            gameState.update(window.userAIFunction);
+            
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            gameState.draw(ctx);
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 실행
+        async function runGame() {
+            if (isRunning) return;
+
+            const code = document.getElementById('codeEditor').value;
+            
+            try {
+                log('코드 실행 중...', 'info');
+                
+                await pyodide.runPythonAsync(code);
+                
+                // Python 함수를 JavaScript로 가져오기
+                window.userAIFunction = pyodide.globals.get('ai_logic').toJs();
+                
+                log('코드 실행 성공! 게임 시작!', 'success');
+                
+                gameState = new GameState();
+                isRunning = true;
+                
+                document.getElementById('runBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
+                gameLoop();
+            } catch (e) {
+                log(`에러: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
+        // 게임 정지
+        function stopGame() {
+            isRunning = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            document.getElementById('runBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            log('게임 정지', 'warning');
+        }
+
+        // 리셋
+        function resetGame() {
+            stopGame();
+            gameState = new GameState();
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 600, 400);
+            document.getElementById('output').innerHTML = '';
+            log('게임 리셋 완료', 'info');
+        }
+
+        // 이벤트 리스너
+        document.getElementById('runBtn').addEventListener('click', runGame);
+        document.getElementById('stopBtn').addEventListener('click', stopGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+        // 초기화
+        initPyodide();
+    </script>
+</body>
+</html>
