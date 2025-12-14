@@ -56,7 +56,7 @@
         
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin: 15px 0;
         }
@@ -180,8 +180,12 @@
                     <div class="stat-value" id="level">1</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-label">남은 탄약</div>
+                    <div class="stat-label">탄약</div>
                     <div class="stat-value" id="ammo">100</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">데미지</div>
+                    <div class="stat-value" id="damage">1</div>
                 </div>
                 <div class="stat">
                     <div class="stat-label">점수</div>
@@ -205,11 +209,12 @@
             <div class="template-info">
                 <strong>사용 가능한 API:</strong><br>
                 • <code>zombies</code> - 좀비 리스트 (distance, hp, type, isVulnerable, index)<br>
-                • <code>zombie.type</code> - 'basic' 또는 'vulnerable'<br>
+                • <code>zombie.type</code> - 'basic', 'vulnerable', 'bonus', 'boss'<br>
                 • <code>zombie.isVulnerable</code> - True일 때만 공격 가능 (vulnerable 타입)<br>
+                • <strong>⭐ bonus</strong> - 빠른 시안색, 맞추면 데미지 +1!<br>
+                • <strong>🔥 boss</strong> - 5레벨마다, 거대 보라색, HP 15+<br>
                 • <code>tower.shoot(index)</code> - 좀비 인덱스로 공격<br>
-                • <code>tower.ammo</code> - 남은 탄약<br>
-                • <code>tower.position</code> - 타워 위치
+                • <code>tower.ammo</code> - 남은 탄약
             </div>
             
             <textarea id="codeEditor" spellcheck="false"># 타워 AI 코드를 작성하세요!
@@ -218,32 +223,38 @@ def ai_logic(tower, zombies):
     """
     매 프레임마다 호출됩니다.
     
-    Args:
-        tower: 타워 객체 (shoot 메서드 사용 가능)
-        zombies: 좀비 리스트
+    전략 힌트:
+    - bonus 좀비 우선 처치 → 데미지 업그레이드!
+    - 보스는 데미지 업그레이드 후 집중 공격
     """
     
     if not zombies or tower.ammo <= 0:
         return
     
-    # 가장 가까운 좀비 찾기
-    closest = min(zombies, key=lambda z: z.distance)
-    
-    # 사거리 체크
-    if closest.distance >= 200:
+    # 사거리 안의 좀비들만 필터
+    in_range = [z for z in zombies if z.distance < 200]
+    if not in_range:
         return
     
-    # 좀비 타입별 처리
-    if closest.type == 'basic':
-        # 기본 좀비는 바로 공격
-        tower.shoot(closest.index)
-    elif closest.type == 'vulnerable':
-        # vulnerable 좀비는 공격 가능할 때만!
-        if closest.isVulnerable:
-            tower.shoot(closest.index)
+    # 1순위: bonus 좀비 (데미지 업!)
+    bonus = [z for z in in_range if z.type == 'bonus']
+    if bonus:
+        target = min(bonus, key=lambda z: z.distance)
+        tower.shoot(target.index)
+        return
+    
+    # 2순위: vulnerable 좀비 (공격 가능할 때)
+    vulnerable = [z for z in in_range if z.type == 'vulnerable' and z.isVulnerable]
+    if vulnerable:
+        target = min(vulnerable, key=lambda z: z.distance)
+        tower.shoot(target.index)
+        return
+    
+    # 3순위: 가장 가까운 좀비
+    closest = min(in_range, key=lambda z: z.distance)
+    tower.shoot(closest.index)
 
-# 여기서부터 코드를 수정하세요!
-# 힌트: vulnerable 좀비를 우선 공격하면 점수가 더 높아요!
+# 보스전 준비: bonus 좀비로 데미지 올리고 보스 집중 공격!
 </textarea>
         </div>
     </div>
@@ -268,32 +279,64 @@ def ai_logic(tower, zombies):
                 this.frameCount = 0;
                 this.spawnTimer = 0;
                 this.spawnInterval = 120;
-                this.shootCooldown = 0;  // 발사 쿨다운
-                this.shootCooldownTime = 30;  // 0.5초 (60fps 기준)
+                this.shootCooldown = 0;
+                this.shootCooldownTime = 30;
+                this.damage = 1;  // 기본 데미지
+                this.bossSpawned = false;  // 보스 스폰 여부
             }
 
             spawnZombie() {
-                // 랜덤으로 좀비 타입 선택 (30% 확률로 vulnerable)
-                const isVulnerable = Math.random() < 0.3;
+                // 5레벨마다 보스 스폰 (한 번만)
+                if (this.level % 5 === 0 && !this.bossSpawned) {
+                    this.zombies.push({
+                        x: 600,
+                        y: 180,
+                        hp: 15 + this.level * 2,  // 엄청 높은 HP
+                        maxHp: 15 + this.level * 2,
+                        speed: 0.2,  // 느림
+                        type: 'boss',
+                        id: Date.now() + Math.random(),
+                        size: 60  // 크기
+                    });
+                    this.bossSpawned = true;
+                    log('🔥 거대 좀비 출현! 집중 공격 필요!', 'warning');
+                    return;
+                }
                 
-                if (isVulnerable) {
+                // 랜덤으로 좀비 타입 선택
+                const rand = Math.random();
+                
+                if (rand < 0.1) {
+                    // 10% - 보너스 좀비 (맞추면 데미지 업그레이드!)
                     this.zombies.push({
                         x: 600,
                         y: 150 + Math.random() * 100,
-                        hp: 999, // 엄청 높은 HP (vulnerable할 때만 죽음)
+                        hp: 1,
+                        maxHp: 1,
+                        speed: 1.5,  // 빠름!
+                        type: 'bonus',
+                        id: Date.now() + Math.random()
+                    });
+                } else if (rand < 0.35) {
+                    // 25% - vulnerable
+                    this.zombies.push({
+                        x: 600,
+                        y: 150 + Math.random() * 100,
+                        hp: 999,
                         maxHp: 999,
                         speed: 0.3 + this.level * 0.05,
                         type: 'vulnerable',
                         id: Date.now() + Math.random(),
-                        isVulnerable: false, // 공격 가능 상태
+                        isVulnerable: false,
                         vulnerableTimer: 0,
-                        vulnerableCycle: 120 // 2초마다 토글
+                        vulnerableCycle: 120
                     });
                 } else {
+                    // 65% - basic
                     this.zombies.push({
                         x: 600,
                         y: 150 + Math.random() * 100,
-                        hp: 1, // 한 방에 죽음
+                        hp: 1,
                         maxHp: 1,
                         speed: 0.5 + this.level * 0.1,
                         type: 'basic',
@@ -348,21 +391,47 @@ def ai_logic(tower, zombies):
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         
                         if (dist < 5) {
+                            const target = bullet.target;
+                            
                             // vulnerable 타입은 공격 가능 상태일 때만 데미지
-                            if (bullet.target.type === 'vulnerable') {
-                                if (bullet.target.isVulnerable) {
-                                    bullet.target.dead = true;
-                                    this.score += 20; // 더 많은 점수
+                            if (target.type === 'vulnerable') {
+                                if (target.isVulnerable) {
+                                    target.dead = true;
+                                    this.score += 20;
                                     this.ammo += 3;
-                                    log('Vulnerable 좀비 처치! (공격 가능 상태)', 'success');
+                                    log('Vulnerable 좀비 처치!', 'success');
                                 } else {
                                     log('공격 실패! 좀비가 무적 상태입니다.', 'warning');
                                 }
-                            } else {
-                                // 일반 좀비는 그냥 데미지
-                                bullet.target.hp -= 1;
-                                if (bullet.target.hp <= 0) {
-                                    bullet.target.dead = true;
+                            } 
+                            // 보너스 좀비 - 데미지 업그레이드!
+                            else if (target.type === 'bonus') {
+                                target.hp -= this.damage;
+                                if (target.hp <= 0) {
+                                    target.dead = true;
+                                    this.damage += 1;  // 데미지 증가!
+                                    this.score += 50;
+                                    this.ammo += 10;
+                                    log(`💥 보너스 획득! 데미지 ${this.damage}로 업그레이드!`, 'success');
+                                }
+                            }
+                            // 보스 좀비
+                            else if (target.type === 'boss') {
+                                target.hp -= this.damage;
+                                if (target.hp <= 0) {
+                                    target.dead = true;
+                                    this.score += 100;
+                                    this.ammo += 20;
+                                    log('🏆 보스 처치 성공!', 'success');
+                                } else {
+                                    log(`보스 HP: ${target.hp}/${target.maxHp}`, 'info');
+                                }
+                            }
+                            // 일반 좀비
+                            else {
+                                target.hp -= this.damage;
+                                if (target.hp <= 0) {
+                                    target.dead = true;
                                     this.score += 10;
                                     this.ammo += 2;
                                 }
@@ -392,7 +461,12 @@ def ai_logic(tower, zombies):
                 // 레벨업 체크
                 if (this.score > this.level * 100) {
                     this.level++;
-                    log(`레벨 ${this.level}! 좀비가 더 강해집니다!`, 'success');
+                    log(`레벨 ${this.level}!`, 'success');
+                    
+                    // 다음 보스 레벨을 위해 플래그 리셋
+                    if (this.level % 5 === 1) {
+                        this.bossSpawned = false;
+                    }
                 }
 
                 // 사용자 AI 실행
@@ -471,27 +545,39 @@ def ai_logic(tower, zombies):
 
                 // 좀비들
                 for (let zombie of this.zombies) {
-                    // 좀비 타입별 색상
+                    // 좀비 타입별 색상과 크기
                     let zombieColor;
-                    if (zombie.type === 'vulnerable') {
-                        zombieColor = zombie.isVulnerable ? '#ff8800' : '#ffcc00'; // 주황/노랑
+                    let size = zombie.size || 30;
+                    
+                    if (zombie.type === 'boss') {
+                        zombieColor = '#9b59b6';  // 보라색
+                        size = zombie.size || 60;
+                    } else if (zombie.type === 'bonus') {
+                        zombieColor = '#00ffff';  // 시안 (청록색)
+                    } else if (zombie.type === 'vulnerable') {
+                        zombieColor = zombie.isVulnerable ? '#ff8800' : '#ffcc00';
                     } else {
                         zombieColor = zombie.hp > zombie.maxHp / 2 ? '#c72e2e' : '#8b0000';
                     }
                     
                     ctx.fillStyle = zombieColor;
-                    ctx.fillRect(zombie.x - 15, zombie.y - 15, 30, 30);
+                    ctx.fillRect(zombie.x - size/2, zombie.y - size/2, size, size);
                     
-                    // HP 바 (vulnerable 타입은 표시 안함)
-                    if (zombie.type !== 'vulnerable') {
+                    // HP 바
+                    if (zombie.type === 'boss' || zombie.type === 'basic') {
                         ctx.fillStyle = '#3e3e42';
-                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30, 5);
+                        ctx.fillRect(zombie.x - size/2, zombie.y - size/2 - 10, size, 5);
                         ctx.fillStyle = '#4ec9b0';
-                        ctx.fillRect(zombie.x - 15, zombie.y - 25, 30 * (zombie.hp / zombie.maxHp), 5);
-                    } else {
+                        ctx.fillRect(zombie.x - size/2, zombie.y - size/2 - 10, size * (zombie.hp / zombie.maxHp), 5);
+                    } else if (zombie.type === 'vulnerable') {
                         // vulnerable 상태 표시
                         ctx.fillStyle = zombie.isVulnerable ? '#ff8800' : '#666666';
                         ctx.fillRect(zombie.x - 15, zombie.y - 25, 30, 5);
+                    } else if (zombie.type === 'bonus') {
+                        // 보너스 표시 (별 모양으로?)
+                        ctx.fillStyle = '#ffff00';
+                        ctx.font = 'bold 20px Arial';
+                        ctx.fillText('⭐', zombie.x - 10, zombie.y - 20);
                     }
                 }
 
@@ -506,6 +592,7 @@ def ai_logic(tower, zombies):
                 // UI 업데이트
                 document.getElementById('level').textContent = this.level;
                 document.getElementById('ammo').textContent = Math.floor(this.ammo);
+                document.getElementById('damage').textContent = this.damage;
                 document.getElementById('score').textContent = this.score;
             }
         }
