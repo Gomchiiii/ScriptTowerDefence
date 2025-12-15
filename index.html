@@ -288,6 +288,35 @@
             <h2>🏰 타워 관리</h2>
             <div class="tower-list" id="towerList"></div>
             
+            <h2>📖 API 문서 <button onclick="toggleApiDoc()" style="padding: 4px 12px; font-size: 12px; margin-left: 10px;">접기 / 펼치기</button></h2>
+            <div id="apiDoc" style="background: #1e1e1e; border: 1px solid #3e3e42; border-radius: 4px; padding: 15px; margin-bottom: 15px; font-size: 13px; line-height: 1.8;">
+                <strong style="color: #569cd6;">타워 AI 함수:</strong><br>
+                <code style="color: #dcdcaa;">def ai_logic(tower, zombies):</code><br>
+                <span style="color: #858585;">매 프레임마다 호출됨</span><br><br>
+                
+                <strong style="color: #569cd6;">tower 객체:</strong><br>
+                • <code>tower.ammo</code> - 남은 탄약<br>
+                • <code>tower.position</code> - 타워 위치 {x, y}<br>
+                • <code>tower.shoot(zombie)</code> - 좀비 공격<br><br>
+                
+                <strong style="color: #569cd6;">zombie 객체:</strong><br>
+                • <code>zombie.type</code> - 'basic', 'vulnerable', 'bonus', 'boss'<br>
+                • <code>zombie.distance</code> - 타워로부터의 거리<br>
+                • <code>zombie.hp</code> - 현재 체력<br>
+                • <code>zombie.isVulnerable</code> - 공격 가능 여부 (vulnerable 타입만)<br><br>
+                
+                <strong style="color: #569cd6;">좀비 종류:</strong><br>
+                🔴 <strong>basic</strong> - 기본 좀비 (HP: 1, 점수: 10)<br>
+                🟡 <strong>vulnerable</strong> - 주황색일 때만 공격 가능 (점수: 20)<br>
+                💎 <strong>bonus</strong> - 시안색, 빠름, 처치 시 데미지 +1 (점수: 50)<br>
+                👹 <strong>boss</strong> - 5레벨마다 출현, 거대 보라색, HP 15+ (점수: 100)<br><br>
+                
+                <strong style="color: #569cd6;">유틸리티:</strong><br>
+                • <code>print("메시지")</code> - 로그에 출력<br>
+                • 사거리: 200 이내에서만 공격 가능<br>
+                • 발사 쿨다운: 30프레임 (0.5초)
+            </div>
+            
             <h2>💻 스크립트 편집</h2>
             <button id="newScriptBtn" style="margin-bottom: 10px;">+ 새 스크립트</button>
             
@@ -846,6 +875,16 @@ def ai_logic(tower, zombies):
             document.getElementById('codeEditor').value = scripts[newName];
             renderScriptTabs();
         });
+        
+        // API 문서 토글
+        function toggleApiDoc() {
+            const doc = document.getElementById('apiDoc');
+            if (doc.style.display === 'none') {
+                doc.style.display = 'block';
+            } else {
+                doc.style.display = 'none';
+            }
+        }
 
         // 코드 저장
         document.getElementById('codeEditor').addEventListener('input', (e) => {
